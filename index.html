@@ -2,112 +2,99 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>审计访谈助手</title>
 <style>
-*{box-sizing:border-box;font-family:system-ui}
-.wrap{max-width:860px;margin:30px auto;padding:0 20px}
-.item{margin:18px 0}
-label{display:block;margin-bottom:7px;font-weight:500;font-size:15px}
-input,textarea{width:100%;padding:11px;border:1px #ddd solid;border-radius:6px;font-size:14px}
-#file{padding:5px}
-#submit{background:#1677ff;color:#fff;border:0;padding:13px;border-radius:6px;width:100%;font-size:16px}
-#res{margin-top:22px;padding:18px;border:1px #eee solid;min-height:260px;white-space:pre-wrap;line-height:1.6}
-.tip{font-size:13px;color:#666;margin-top:4px}
+  body {
+    font-family: "Microsoft YaHei", sans-serif;
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 0 20px;
+  }
+  textarea {
+    width: 100%;
+    height: 140px;
+    margin: 10px 0;
+    padding: 10px;
+    font-size: 15px;
+  }
+  button {
+    padding: 10px 24px;
+    font-size: 16px;
+    cursor: pointer;
+    background: #2f54eb;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+  }
+  button:hover {
+    background: #2342c9;
+  }
+  #result {
+    margin-top: 20px;
+    white-space: pre-wrap;
+    background: #f5f5f5;
+    padding: 15px;
+    border-radius: 6px;
+    min-height: 120px;
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
-    <h2>审计访谈智能分析助手</h2>
-    <div class="item">
-        <label>被审计单位（Apart，必填）</label>
-        <input id="Apart" placeholder="填写被审计单位全称">
-    </div>
-    <div class="item">
-        <label>业务领域（worldfield）</label>
-        <textarea id="worldfield" rows="4" placeholder="默认：执行国家经济方针和决策部署（物价、证照等）、气源保证、投资、内控、三重一大、党建、人力、工程管理、采购招标、费用报销虚报、资金挪用、库存管理、大额采购审批、八项规定、小金库、新能源、综合能源、综合商品、综合服务、研发，以往审计问题的整改等"></textarea>
-    </div>
-    <div class="item">
-        <label>审计关注点（attention）</label>
-        <textarea id="attention" rows="6" placeholder="默认：1.回避问题：被访谈人是否刻意回避、转移话题、不正面回答 2.信息模糊：回答是否笼统、无具体数据/时间/金额/凭证 3.前后矛盾：对话上下文是否存在逻辑冲突、说法不一致 4.关键缺失：是否缺少审计关注的业务流程、金额、责任人、时间节点、证据材料 5.合规风险：是否存在舞弊暗示、违规操作、内控缺陷、利益冲突 6.访谈质量：提问是否精准、是否引导被访谈人、是否遗漏必要追问"></textarea>
-    </div>
-    <div class="item">
-        <label>上传访谈文档/图片（upload，必填，支持PDF/Word/图片，最多10个文件）</label>
-        <input type="file" id="upload" multiple accept=".pdf,.docx,.doc,.xlsx,.xls,.png,.jpg,.jpeg,.gif">
-        <div class="tip">支持文档、图片格式，单文件文档≤50MB，图片≤30MB</div>
-    </div>
-    <div class="item">
-        <button id="submit">提交AI智能分析</button>
-    </div>
-    <div>AI分析结果：</div>
-    <div id="res">等待提交数据后生成分析报告...</div>
-</div>
+<h2>审计访谈助手</h2>
+<textarea id="inputText" placeholder="请输入访谈内容，例如：被访谈人姓名、岗位、问题、回答..."></textarea>
+<button id="sendBtn">提交分析</button>
+<div id="result"></div>
 
 <script>
-// Dify接口配置
-const API_URL = "https://dify-api.crc.com.cn/v1/workflows/run";
-const APP_KEY = "app-BD3QTPMTeA4bV3bpyLspLjcl";
+  // 前端走 ESA 代理，不要写死后端域名和密钥
+  const API_URL = "/api/workflows/run";
 
-const resBox = document.getElementById('res');
-// 默认预置worldfield、attention内容
-document.getElementById('worldfield').value = "执行国家经济方针和决策部署（物价、证照等）、气源保证、投资、内控、三重一大、党建、人力、工程管理、采购招标、费用报销虚报、资金挪用、库存管理、大额采购审批、八项规定、小金库、新能源、综合能源、综合商品、综合服务、研发，以往审计问题的整改等";
-document.getElementById('attention').value = "1. 回避问题：被访谈人是否刻意回避、转移话题、不正面回答 2. 信息模糊：回答是否笼统、无具体数据/时间/金额/凭证 3. 前后矛盾：对话上下文是否存在逻辑冲突、说法不一致 4. 关键缺失：是否缺少审计关注的业务流程、金额、责任人、时间节点、证据材料 5. 合规风险：是否存在舞弊暗示、违规操作、内控缺陷、利益冲突 6. 访谈质量：提问是否精准、是否引导被访谈人、是否遗漏必要追问";
+  document.getElementById("sendBtn").addEventListener("click", async () => {
+    const input = document.getElementById("inputText").value.trim();
+    const resultBox = document.getElementById("result");
 
-document.getElementById('submit').onclick = async ()=>{
-    const Apart = document.getElementById('Apart').value.trim();
-    const worldfield = document.getElementById('worldfield').value.trim();
-    const attention = document.getElementById('attention').value.trim();
-    const files = document.getElementById('upload').files;
-    // 必填项校验
-    if(!Apart){
-        resBox.innerText="【错误】被审计单位不能为空！";
-        return;
+    if (!input) {
+      resultBox.textContent = "请输入访谈内容";
+      return;
     }
-    if(files.length<1){
-        resBox.innerText="【错误】必须上传至少一份访谈文档/图片！";
-        return;
-    }
-    resBox.innerText="正在上传文件并调用AI分析，请稍候...";
-    // 构造表单数据（适配Dify文件列表入参array[file]）
-    const formData = new FormData();
-    const reqBody = JSON.stringify({
-        inputs:{Apart,worldfield,attention},
-        response_mode:"streaming",
-        user:"audit-system-user"
-    })
-    formData.append('data',reqBody);
-    // 批量添加上传文件
-    for(let f of files) formData.append('upload',f);
 
-    try{
-        const resp = await fetch(API_URL,{
-            method:'POST',
-            headers:{Authorization:`Bearer ${APP_KEY}`},
-            body:formData
+    resultBox.textContent = "请求中...";
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+          // ⚠️ 前端不写 Authorization，由 ESA 边缘函数统一加
+        },
+        body: JSON.stringify({
+          inputs: {
+            content: input
+          },
+          response_mode: "streaming",
+          user: "audit-user"
         })
-        const reader = resp.body.getReader();
-        const decoder = new TextDecoder();
-        resBox.innerText='';
-        let allAnswer = '';
-        while(true){
-            const {done,value}=await reader.read();
-            if(done) break;
-            let chunk = decoder.decode(value,{stream:true});
-            // 解析Dify流式返回
-            chunk.split('\n').forEach(line=>{
-                if(line.startsWith('data:')){
-                    try{
-                        let json = JSON.parse(line.slice(5));
-                        if(json.answer) allAnswer += json.answer;
-                    }catch(e){}
-                }
-            })
-            resBox.innerText = allAnswer;
-        }
-    }catch(err){
-        resBox.innerText="接口异常："+err.message+"\n⚠️请去Dify应用设置→安全，把ESA部署域名添加至跨域白名单";
+      });
+
+      if (!res.ok) {
+        throw new Error("HTTP " + res.status);
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let result = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        result += chunk;
+        resultBox.textContent = result;
+      }
+    } catch (e) {
+      resultBox.textContent = "错误：" + e.message;
     }
-}
+  });
 </script>
 </body>
 </html>
